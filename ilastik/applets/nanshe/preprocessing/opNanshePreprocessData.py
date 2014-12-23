@@ -199,10 +199,10 @@ class OpNanshePreprocessDataCached(Operator):
     def __init__(self, *args, **kwargs):
         super( OpNanshePreprocessDataCached, self ).__init__( *args, **kwargs )
 
-        self.opConvertType = OpConvertTypeCached(parent=self)
+        self.opConvertType = OpConvertType(parent=self)
         self.opConvertType.Dtype.setValue(numpy.float32)
 
-        self.opNansheRemoveZeroedLines = OpNansheRemoveZeroedLinesCached(parent=self)
+        self.opNansheRemoveZeroedLines = OpNansheRemoveZeroedLines(parent=self)
         self.opNansheRemoveZeroedLines.ErosionShape.connect(self.ErosionShape)
         self.opNansheRemoveZeroedLines.DilationShape.connect(self.DilationShape)
 
@@ -216,7 +216,7 @@ class OpNanshePreprocessDataCached(Operator):
         self.opNansheExtractF0.BiasEnabled.connect(self.BiasEnabled)
         self.opNansheExtractF0.Bias.connect(self.Bias)
 
-        self.opNansheWaveletTransform = OpNansheWaveletTransformCached(parent=self)
+        self.opNansheWaveletTransform = OpNansheWaveletTransform(parent=self)
         self.opNansheWaveletTransform.Scale.connect(self.Scale)
 
 
