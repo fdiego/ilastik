@@ -37,8 +37,9 @@ import itertools
 import numpy
 
 import nanshe
-import nanshe.imp
 import nanshe.imp.segment
+import nanshe.util.xnumpy
+import nanshe.util.iters
 
 
 class OpNansheEstimateF0(Operator):
@@ -49,7 +50,7 @@ class OpNansheEstimateF0(Operator):
     name = "OpNansheEstimateF0"
     category = "Pointwise"
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
     HalfWindowSize = InputSlot(value=400, stype='int')
     WhichQuantile = InputSlot(value=0.15, stype='float')
@@ -58,7 +59,7 @@ class OpNansheEstimateF0(Operator):
     SpatialSmoothingGaussianFilterStdev = InputSlot(value=5.0, stype='float')
     SpatialSmoothingGaussianFilterWindowSize = InputSlot(value=5.0, stype='float')
 
-    Output = OutputSlot()
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNansheEstimateF0, self ).__init__( *args, **kwargs )
@@ -191,15 +192,18 @@ class OpNansheEstimateF0(Operator):
         raw = self.Input[halo_key].wait()
         raw = raw[..., 0]
 
-        f0 = nanshe.imp.segment.estimate_f0(
-            raw,
+        f0 = raw.copy()
+        f0.fill(0)
+
+        f0[:, ~numpy.ma.getmaskarray(raw).max(axis=0)] = nanshe.imp.segment(
+            nanshe.util.xnumpy.truncate_masked_frames(raw),
             half_window_size=half_window_size,
             which_quantile=which_quantile,
             temporal_smoothing_gaussian_filter_stdev=temporal_smoothing_gaussian_filter_stdev,
             temporal_smoothing_gaussian_filter_window_size=temporal_smoothing_gaussian_filter_window_size,
             spatial_smoothing_gaussian_filter_stdev=spatial_smoothing_gaussian_filter_stdev,
             spatial_smoothing_gaussian_filter_window_size=spatial_smoothing_gaussian_filter_window_size
-        )
+        ).reshape(len(raw), -1)
 
         f0 = f0[..., None]
 
@@ -243,7 +247,7 @@ class OpNansheEstimateF0Cached(Operator):
     category = "Pointwise"
 
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
     HalfWindowSize = InputSlot(value=400, stype='int')
     WhichQuantile = InputSlot(value=0.15, stype='float')
@@ -252,7 +256,7 @@ class OpNansheEstimateF0Cached(Operator):
     SpatialSmoothingGaussianFilterStdev = InputSlot(value=5.0, stype='float')
     SpatialSmoothingGaussianFilterWindowSize = InputSlot(value=5.0, stype='float')
 
-    Output = OutputSlot()
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNansheEstimateF0Cached, self ).__init__( *args, **kwargs )

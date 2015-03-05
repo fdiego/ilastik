@@ -279,6 +279,112 @@ class SerialSlot(object):
                     # we disconnect the subslot.
                     subslot.disconnect()
 
+
+class SerialObjectSlot(SerialSlot):
+    """Implements the logic for serializing a slot."""
+    def __init__(self, slot, object_serializer, inslot=None, name=None, subname=None,
+                 default=None, depends=None, selfdepends=True):
+        """
+        :param slot: where to get data to save
+
+        :param object_serializer: how to save the object
+
+        :param inslot: where to put loaded data. If None, it is the
+        same as 'slot'.
+
+        :param name: name used for the group in the hdf5 file.
+
+        :param subname: used for creating subgroups for multislots.
+          should be able to call subname.format(i), where i is an
+          integer.
+
+        :param default: DEPRECATED
+
+        :param depends: a list of slots which must be ready before this slot
+          can be serialized. If None, defaults to [].
+
+        :param selfdepends: whether 'slot' should be added to 'depends'
+
+        """
+        if slot.level > 1:
+            # FIXME: recursive serialization, to support arbitrary levels
+            raise Exception('slots of levels > 1 not supported')
+        self.slot = slot
+
+        assert(issubclass(object_serializer, SerialSlot))
+        self.object_serializer = object_serializer
+
+        super(SerialObjectSlot, self).__init__(slot=slot, inslot=inslot, name=name, subname=subname,
+                 default=default, depends=depends, selfdepends=selfdepends)
+
+    @staticmethod
+    def _saveValue(group, name, value):
+        """Seperate so that subclasses can override, if necessary.
+
+        For instance, SerialListSlot needs to save an extra attribute
+        if the value is an empty list.
+
+        """
+        import nanshe.util.iters
+        import itertools
+
+        itertools.izip(*[xrange(_) for _ in value.shape])
+
+        nanshe.util.iters.filled_stringify_enumerate(value)
+        group.require_group(name)
+        group.create_dataset(name, data=value)
+
+    def _serialize(self, group, name, slot):
+        """
+        :param group: The parent group.
+        :type group: h5py.Group
+        :param name: The name of the data or group
+        :type name: string
+        :param slot: the slot to serialize
+        :type slot: SerialObjectSlot
+
+        """
+        if slot.level == 0:
+            try:
+                self._saveValue(group, name, slot.value)
+            except:
+                self._saveValue(group, name, slot(()).wait())
+        else:
+            subgroup = group.create_group(name)
+            for i, subslot in enumerate(slot):
+                subname = self.subname.format(i)
+                self._serialize(subgroup, subname, slot[i])
+
+    def _deserialize(self, subgroup, slot):
+        """
+        :param subgroup: *not* the parent group. This slot's group.
+        :type subgroup: h5py.Group
+
+        """
+        if slot.level == 0:
+            self._getValue(subgroup, slot)
+        else:
+            # Pair stored indexes with their keys,
+            # e.g. [(0,'0'), (2, '2'), (3, '3')]
+            # Note that in some cases an index might be intentionally skipped.
+            indexes_to_keys = { int(k) : k for k in subgroup.keys() }
+
+            # Ensure the slot is at least big enough to deserialize into.
+            max_index = max( indexes_to_keys.keys() )
+            if len(slot) < max_index+1:
+                slot.resize(max_index+1)
+
+            # Now retrieve the data
+            for i, subslot in enumerate(slot):
+                if i in indexes_to_keys:
+                    key = indexes_to_keys[i]
+                    assert key == self.subname.format(i)
+                    self._deserialize(subgroup[key], subslot)
+                else:
+                    # Since there was no data for this subslot in the project file,
+                    # we disconnect the subslot.
+                    subslot.disconnect()
+
 #######################################################
 # some serial slots that are used in multiple applets #
 #######################################################

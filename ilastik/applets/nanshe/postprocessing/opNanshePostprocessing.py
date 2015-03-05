@@ -47,7 +47,7 @@ class OpNanshePostprocessing(Operator):
 
 
     Input = InputSlot()
-    CacheInput = InputSlot(optional=True)
+    # CacheInput = InputSlot(optional=True)
 
     SignificanceThreshold = InputSlot(value=3.0, stype="float")
     WaveletTransformScale = InputSlot(value=4, stype="int")
@@ -75,9 +75,9 @@ class OpNanshePostprocessing(Operator):
 
     Fuse_FractionMeanNeuronMaxThreshold = InputSlot(value=0.01, stype="float")
 
-    CleanBlocks = OutputSlot()
+    # CleanBlocks = OutputSlot()
     Output = OutputSlot()
-    ColorizedOutput = OutputSlot()
+    # ColorizedOutput = OutputSlot()
 
     def __init__(self, *args, **kwargs):
         super( OpNanshePostprocessing, self ).__init__( *args, **kwargs )
@@ -108,12 +108,11 @@ class OpNanshePostprocessing(Operator):
 
 
         self.opPostprocess.Input.connect( self.Input )
-        self.opPostprocess.CacheInput.connect( self.CacheInput )
+        # self.opPostprocess.CacheInput.connect( self.CacheInput )
 
-
-        self.CleanBlocks.connect( self.opPostprocess.CleanBlocks )
+        # self.CleanBlocks.connect( self.opPostprocess.CleanBlocks )
         self.Output.connect( self.opPostprocess.Output )
-        self.ColorizedOutput.connect(self.opPostprocess.ColorizedOutput)
+        # self.ColorizedOutput.connect(self.opPostprocess.ColorizedOutput)
 
     def setInSlot(self, slot, subindex, roi, value):
         pass

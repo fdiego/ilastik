@@ -49,7 +49,7 @@ class NanshePostprocessingSerializer(AppletSerializer):
                                                                    SerialSlot(operator.AcceptedNeuronShapeConstraints_Eccentricity_Max_Enabled, selfdepends=True),
                                                                    SerialSlot(operator.AlignmentMinThreshold, selfdepends=True),
                                                                    SerialSlot(operator.OverlapMinThreshold, selfdepends=True),
-                                                                   SerialSlot(operator.Fuse_FractionMeanNeuronMaxThreshold, selfdepends=True),
-                                                                   SerialBlockSlot(operator.Output,
-                                                                                   operator.CacheInput,
-                                                                                   operator.CleanBlocks, selfdepends=True)])
+                                                                   SerialSlot(operator.Fuse_FractionMeanNeuronMaxThreshold, selfdepends=True)])#,
+                                                                   # SerialBlockSlot(operator.Output,
+                                                                   #                 operator.CacheInput,
+                                                                   #                 operator.CleanBlocks, selfdepends=True)])

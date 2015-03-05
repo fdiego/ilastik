@@ -48,7 +48,7 @@ class OpNansheExtractF0(Operator):
     name = "OpNansheExtractF0"
     category = "Pointwise"
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
     HalfWindowSize = InputSlot(value=400, stype='int')
     WhichQuantile = InputSlot(value=0.15, stype='float')
@@ -59,8 +59,8 @@ class OpNansheExtractF0(Operator):
     BiasEnabled = InputSlot(value=False, stype='bool')
     Bias = InputSlot(value=0.0, stype='float')
 
-    F0 = OutputSlot()
-    dF_F = OutputSlot()
+    F0 = OutputSlot(allow_mask=True)
+    dF_F = OutputSlot(allow_mask=True)
 
     def __init__(self, cache_f0=False, *args, **kwargs):
         super( OpNansheExtractF0, self ).__init__( *args, **kwargs )
@@ -195,7 +195,7 @@ class OpNansheExtractF0Cached(Operator):
     category = "Pointwise"
 
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
     HalfWindowSize = InputSlot(value=400, stype='int')
     WhichQuantile = InputSlot(value=0.15, stype='float')
@@ -206,8 +206,8 @@ class OpNansheExtractF0Cached(Operator):
     BiasEnabled = InputSlot(value=False, stype='bool')
     Bias = InputSlot(value=0.0, stype='float')
 
-    F0 = OutputSlot()
-    dF_F = OutputSlot()
+    F0 = OutputSlot(allow_mask=True)
+    dF_F = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNansheExtractF0Cached, self ).__init__( *args, **kwargs )

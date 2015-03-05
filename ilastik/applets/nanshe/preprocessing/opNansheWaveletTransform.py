@@ -36,6 +36,7 @@ import numpy
 
 import nanshe
 import nanshe.util.iters
+import nanshe.util.xnumpy
 import nanshe.imp.filters.wavelet
 
 class OpNansheWaveletTransform(Operator):
@@ -47,11 +48,11 @@ class OpNansheWaveletTransform(Operator):
     category = "Pointwise"
 
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
     Scale = InputSlot(value=4, stype="int")
     
-    Output = OutputSlot()
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNansheWaveletTransform, self ).__init__( *args, **kwargs )
@@ -171,10 +172,16 @@ class OpNansheWaveletTransform(Operator):
         raw = self.Input[halo_key].wait()
         raw = raw[..., 0]
 
-        processed = nanshe.imp.filters.wavelet.transform(raw,
-                                                         scale=scale,
-                                                         include_intermediates = False,
-                                                         include_lower_scales = False)
+        processed = raw.copy()
+        processed.fill(0)
+
+        processed[:, ~numpy.ma.getmaskarray(raw).max(axis=0)] = nanshe.imp.filters.wavelet.transform(
+            nanshe.util.xnumpy.truncate_masked_frames(raw),
+            scale=scale,
+            include_intermediates = False,
+            include_lower_scales = False
+        ).reshape(len(raw), -1)
+
         processed = processed[..., None]
         
         if slot.name == 'Output':
@@ -205,11 +212,11 @@ class OpNansheWaveletTransformCached(Operator):
     category = "Pointwise"
 
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
     Scale = InputSlot(value=4, stype="int")
 
-    Output = OutputSlot()
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNansheWaveletTransformCached, self ).__init__( *args, **kwargs )

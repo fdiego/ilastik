@@ -108,6 +108,7 @@ class OpDataSelection(Operator):
     ProjectDataGroup = InputSlot(stype='string', optional=True) #: The internal path to the hdf5 group where project-local datasets are stored within the project file
     WorkingDirectory = InputSlot(stype='filestring') #: The filesystem directory where the project file is located
     Dataset = InputSlot(stype='object') #: A DatasetInfo object
+    # PreferTimeFirst = InputSlot(value=True)
 
     # Outputs
     Image = OutputSlot() #: The output image
@@ -182,6 +183,10 @@ class OpDataSelection(Operator):
                datasetInfo.axistags is not None or \
                (providerSlot.meta.drange is None and providerSlot.meta.dtype == numpy.uint8):
                 metadata = {}
+                # if datasetInfo.meta['axisorder_was_guessed']:
+                #     metadata['axistags'] = providerSlot.meta.axistags
+                #     # if self.PreferTimeFirst:
+                #     #     metadata['axistags']
                 if datasetInfo.drange is not None:
                     metadata['drange'] = datasetInfo.drange
                 elif providerSlot.meta.dtype == numpy.uint8:
