@@ -36,6 +36,7 @@ import vigra
 import nanshe
 import nanshe.imp.advanced_image_processing
 import nanshe.util.iters
+import nanshe.util.xnumpy
 
 
 class OpNansheGenerateDictionary(Operator):
@@ -169,25 +170,29 @@ class OpNansheGenerateDictionary(Operator):
         mode = self.Mode.value
         modeD = self.ModeD.value
 
-        processed = nanshe.imp.advanced_image_processing.generate_dictionary(raw,
-                                                                         **{ "spams.trainDL" :
-                                                                                 {
-                                                                                     "K" : K,
-                                                                                     "gamma1" : gamma1,
-                                                                                     "gamma2" : gamma2,
-                                                                                     "numThreads" : numThreads,
-                                                                                     "batchsize" : batchsize,
-                                                                                     "iter" : numIter,
-                                                                                     "lambda1" : lambda1,
-                                                                                     "lambda2" : lambda2,
-                                                                                     "posAlpha" : posAlpha,
-                                                                                     "posD" : posD,
-                                                                                     "clean" : clean,
-                                                                                     "mode" : mode,
-                                                                                     "modeD" : modeD
-                                                                                 }
-                                                                         }
-        )
+        processed = raw.copy()
+        processed.fill(0)
+
+        processed[:, ~numpy.ma.getmaskarray(raw).max(axis=0)] = nanshe.imp.advanced_image_processing.generate_dictionary(
+            nanshe.util.xnumpy.truncate_masked_frames(raw),
+            **{ "spams.trainDL" :
+                    {
+                        "K" : K,
+                        "gamma1" : gamma1,
+                        "gamma2" : gamma2,
+                        "numThreads" : numThreads,
+                        "batchsize" : batchsize,
+                        "iter" : numIter,
+                        "lambda1" : lambda1,
+                        "lambda2" : lambda2,
+                        "posAlpha" : posAlpha,
+                        "posD" : posD,
+                        "clean" : clean,
+                        "mode" : mode,
+                        "modeD" : modeD
+                    }
+            }
+        ).reshape(len(raw), -1)
 
         if slot.name == 'Output':
             result[...] = processed[output_key]

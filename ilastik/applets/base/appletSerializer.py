@@ -279,6 +279,112 @@ class SerialSlot(object):
                     # we disconnect the subslot.
                     subslot.disconnect()
 
+
+class SerialObjectSlot(SerialSlot):
+    """Implements the logic for serializing a slot."""
+    def __init__(self, slot, object_serializer, inslot=None, name=None, subname=None,
+                 default=None, depends=None, selfdepends=True):
+        """
+        :param slot: where to get data to save
+
+        :param object_serializer: how to save the object
+
+        :param inslot: where to put loaded data. If None, it is the
+        same as 'slot'.
+
+        :param name: name used for the group in the hdf5 file.
+
+        :param subname: used for creating subgroups for multislots.
+          should be able to call subname.format(i), where i is an
+          integer.
+
+        :param default: DEPRECATED
+
+        :param depends: a list of slots which must be ready before this slot
+          can be serialized. If None, defaults to [].
+
+        :param selfdepends: whether 'slot' should be added to 'depends'
+
+        """
+        if slot.level > 1:
+            # FIXME: recursive serialization, to support arbitrary levels
+            raise Exception('slots of levels > 1 not supported')
+        self.slot = slot
+
+        assert(issubclass(object_serializer, SerialSlot))
+        self.object_serializer = object_serializer
+
+        super(SerialObjectSlot, self).__init__(slot=slot, inslot=inslot, name=name, subname=subname,
+                 default=default, depends=depends, selfdepends=selfdepends)
+
+    @staticmethod
+    def _saveValue(group, name, value):
+        """Seperate so that subclasses can override, if necessary.
+
+        For instance, SerialListSlot needs to save an extra attribute
+        if the value is an empty list.
+
+        """
+        import nanshe.util.iters
+        import itertools
+
+        itertools.izip(*[xrange(_) for _ in value.shape])
+
+        nanshe.util.iters.filled_stringify_enumerate(value)
+        group.require_group(name)
+        group.create_dataset(name, data=value)
+
+    def _serialize(self, group, name, slot):
+        """
+        :param group: The parent group.
+        :type group: h5py.Group
+        :param name: The name of the data or group
+        :type name: string
+        :param slot: the slot to serialize
+        :type slot: SerialObjectSlot
+
+        """
+        if slot.level == 0:
+            try:
+                self._saveValue(group, name, slot.value)
+            except:
+                self._saveValue(group, name, slot(()).wait())
+        else:
+            subgroup = group.create_group(name)
+            for i, subslot in enumerate(slot):
+                subname = self.subname.format(i)
+                self._serialize(subgroup, subname, slot[i])
+
+    def _deserialize(self, subgroup, slot):
+        """
+        :param subgroup: *not* the parent group. This slot's group.
+        :type subgroup: h5py.Group
+
+        """
+        if slot.level == 0:
+            self._getValue(subgroup, slot)
+        else:
+            # Pair stored indexes with their keys,
+            # e.g. [(0,'0'), (2, '2'), (3, '3')]
+            # Note that in some cases an index might be intentionally skipped.
+            indexes_to_keys = { int(k) : k for k in subgroup.keys() }
+
+            # Ensure the slot is at least big enough to deserialize into.
+            max_index = max( indexes_to_keys.keys() )
+            if len(slot) < max_index+1:
+                slot.resize(max_index+1)
+
+            # Now retrieve the data
+            for i, subslot in enumerate(slot):
+                if i in indexes_to_keys:
+                    key = indexes_to_keys[i]
+                    assert key == self.subname.format(i)
+                    self._deserialize(subgroup[key], subslot)
+                else:
+                    # Since there was no data for this subslot in the project file,
+                    # we disconnect the subslot.
+                    subslot.disconnect()
+
 #######################################################
 # some serial slots that are used in multiple applets #
 #######################################################
@@ -415,6 +521,8 @@ class SerialBlockSlot(SerialSlot):
     def _serialize(self, group, name, slot):
         logger.debug("Serializing BlockSlot: {}".format( self.name ))
         mygroup = group.create_group(name)
+        # Need to know if it has a masked array or not.
+        mygroup.attrs["meta.has_mask"] = slot.meta.has_mask
         num = len(self.blockslot)
         for index in range(num):
             subname = self.subname.format(index)
@@ -441,6 +549,23 @@ class SerialBlockSlot(SerialSlot):
                         slicing = roiToSlice(*bounding_box_roi)
                         block = block[block_slicing]
 
+                # If we have a masked array, convert it to a structured array so that h5py can handle it.
+                if slot.meta.has_mask:
+                    # Verify that it is a masked array
+                    # Make sure the mask follows the standard.
+                    # block = numpy.ma.asanyarray(block)
+                    # block.mask = numpy.ma.getmaskarray(block)
+                    # Shrink mask for compact storage?
+                    # block.shrink_mask()
+                    block = numpy.array(
+                        (block.data, block.mask, block.fill_value),
+                        dtype=[
+                            ("data", block.data.dtype, block.data.shape),
+                            ("mask", block.mask.dtype, block.mask.shape),
+                            ("fill_value", block.fill_value.dtype, block.fill_value.shape)
+                        ]
+                    )
+
                 subgroup.create_dataset(blockName, data=block)
                 subgroup[blockName].attrs['blockSlice'] = slicingToString(slicing)
 
@@ -448,6 +573,11 @@ class SerialBlockSlot(SerialSlot):
     def _deserialize(self, mygroup, slot):
         logger.debug("Deserializing BlockSlot: {}".format( self.name ))
         num = len(mygroup)
+        assert(slot.meta.has_mask == mygroup.attrs["meta.has_mask"],
+               "The slot and stored data have different values for `has_mask`." +
+               " They are `slot.meta.has_mask`=" + repr(slot.meta.has_mask) +
+               " and `mygroup.attrs[\"meta.has_mask\"]`=" + repr(mygroup.attrs["meta.has_mask"]) + "." +
+               " Please fix this to proceed with deserialization.")
         if len(self.inslot) < num:
             self.inslot.resize(num)
         # Annoyingly, some applets store their groups with names like, img0,img1,img2,..,img9,img10,img11
@@ -460,7 +590,19 @@ class SerialBlockSlot(SerialSlot):
             groupName, labelGroup = t
             for blockData in labelGroup.values():
                 slicing = stringToSlicing(blockData.attrs['blockSlice'])
-                self.inslot[index][slicing] = blockData[...]
+                blockArray = blockData[...]
+                # If it is suppose to be a masked array,
+                # convert the structured array representation back to a masked array.
+                if slot.meta.has_mask:
+                    blockArray = numpy.ma.masked_array(
+                        blockArray["data"],
+                        mask=blockArray["mask"],
+                        fill_value=blockArray["fill_value"],
+                        shrink=False
+                    )
+                    # Ensure full mask, necessary for properly handling views in lazyflow.
+                    blockArray.mask = numpy.ma.getmaskarray(blockArray)
+                self.inslot[index][slicing] = blockArray
 
 class SerialHdf5BlockSlot(SerialBlockSlot):
 

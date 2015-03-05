@@ -26,8 +26,9 @@ __date__ = "$Oct 23, 2014 09:45:39 EDT$"
 
 from lazyflow.graph import Operator, InputSlot, OutputSlot
 from lazyflow.operators import OpArrayCache
+from lazyflow.operators.valueProviders import OpValueCache
 
-from ilastik.applets.nanshe.opColorizeLabelImage import OpColorizeLabelImage
+# from ilastik.applets.nanshe.opColorizeLabelImage import OpColorizeLabelImage
 
 from ilastik.applets.base.applet import DatasetConstraintError
 
@@ -78,14 +79,14 @@ class OpNanshePostprocessData(Operator):
     Fuse_FractionMeanNeuronMaxThreshold = InputSlot(value=0.01, stype="float")
 
     Output = OutputSlot()
-    ColorizedOutput = OutputSlot()
+    # ColorizedOutput = OutputSlot()
 
     def __init__(self, *args, **kwargs):
         super( OpNanshePostprocessData, self ).__init__( *args, **kwargs )
 
-        self.opColorizeLabelImage = OpColorizeLabelImage(parent=self)
-        self.opColorizeLabelImage.Input.connect(self.Output)
-        self.ColorizedOutput.connect(self.opColorizeLabelImage.Output)
+        # self.opColorizeLabelImage = OpColorizeLabelImage(parent=self)
+        # self.opColorizeLabelImage.Input.connect(self.Output)
+        # self.ColorizedOutput.connect(self.opColorizeLabelImage.Output)
 
     def _checkConstraints(self, *args):
         slot = self.Input
@@ -129,12 +130,15 @@ class OpNanshePostprocessData(Operator):
     def setupOutputs(self):
         # Copy the input metadata to both outputs
         self.Output.meta.assignFrom( self.Input.meta )
-        self.Output.meta.shape = self.Output.meta.shape[1:] + (1,)
-        self.Output.meta.dtype = numpy.uint64
+        # self.Output.meta.shape = self.Output.meta.shape[1:] + (1,)
+        # self.Output.meta.dtype = numpy.uint64
+        self.Output.meta.shape = (1,)
+        self.Output.meta.dtype = object
 
-        spatial_dims = [_ for _ in self.Output.meta.axistags if _.isSpatial()]
+        # spatial_dims = [_ for _ in self.Output.meta.axistags if _.isSpatial()]
 
-        self.Output.meta.axistags = vigra.AxisTags(*(spatial_dims + [vigra.AxisInfo.c]))
+        # self.Output.meta.axistags = vigra.AxisTags(*(spatial_dims + [vigra.AxisInfo.c]))
+        del self.Output.meta["axistags"]
     
     def execute(self, slot, subindex, roi, result):
         key = roi.toSlice()
@@ -224,15 +228,31 @@ class OpNanshePostprocessData(Operator):
             }
         }
 
-        processed = nanshe.imp.advanced_image_processing.postprocess_data(raw, **parameters)
+        processed = raw.copy()
+        processed.fill(0)
 
-        processed_label_image = nanshe.util.xnumpy.enumerate_masks_max(processed["mask"])
+        processed[:, ~numpy.ma.getmaskarray(raw).max(axis=0)] = nanshe.imp.advanced_image_processing.postprocess_data(
+            nanshe.util.xnumpy.truncate_masked_frames(raw),
+            **parameters
+        ).reshape(len(raw), -1)
 
-        processed_label_image = processed_label_image[0]
-        processed_label_image = processed_label_image[..., None]
+        processed = processed["mask"]
+
+        # processed_label_image = nanshe.util.xnumpy.enumerate_masks_max(processed["mask"])
+        #
+        # processed_label_image = processed_label_image[0]
+        # processed_label_image = processed_label_image[..., None]
+
+        spatial_dims = [_ for _ in self.Input.meta.axistags if _.isSpatial()]
+        axistags = vigra.AxisTags(*([vigra.AxisInfo.c] + spatial_dims))
+
+        processed = vigra.taggedView(processed, axistags)
+
+        result_object = numpy.zeros((1,), dtype=object)
+        result_object[0] = processed
 
         if slot.name == 'Output':
-            result[...] = processed_label_image
+            result[...] = result_object
 
     def setInSlot(self, slot, subindex, roi, value):
         pass
@@ -270,7 +290,7 @@ class OpNanshePostprocessDataCached(Operator):
 
 
     Input = InputSlot()
-    CacheInput = InputSlot(optional=True)
+    # CacheInput = InputSlot(optional=True)
 
     SignificanceThreshold = InputSlot(value=3.0, stype="float")
     WaveletTransformScale = InputSlot(value=4, stype="int")
@@ -298,9 +318,9 @@ class OpNanshePostprocessDataCached(Operator):
 
     Fuse_FractionMeanNeuronMaxThreshold = InputSlot(value=0.01, stype="float")
 
-    CleanBlocks = OutputSlot()
+    # CleanBlocks = OutputSlot()
     Output = OutputSlot()
-    ColorizedOutput = OutputSlot()
+    # ColorizedOutput = OutputSlot()
 
     def __init__(self, *args, **kwargs):
         super( OpNanshePostprocessDataCached, self ).__init__( *args, **kwargs )
@@ -329,27 +349,27 @@ class OpNanshePostprocessDataCached(Operator):
         self.opPostprocessing.Fuse_FractionMeanNeuronMaxThreshold.connect(self.Fuse_FractionMeanNeuronMaxThreshold)
 
 
-        self.opCache = OpArrayCache(parent=self)
+        self.opCache = OpValueCache(parent=self)
         self.opCache.fixAtCurrent.setValue(False)
-        self.CleanBlocks.connect( self.opCache.CleanBlocks )
+        # self.CleanBlocks.connect( self.opCache.CleanBlocks )
 
         self.opPostprocessing.Input.connect( self.Input )
         self.opCache.Input.connect( self.opPostprocessing.Output )
         self.Output.connect( self.opCache.Output )
 
-        self.opColorizeLabelImage = OpColorizeLabelImage(parent=self)
-        self.opColorizeLabelImage.Input.connect(self.Output)
-        self.ColorizedOutput.connect(self.opColorizeLabelImage.Output)
+        # self.opColorizeLabelImage = OpColorizeLabelImage(parent=self)
+        # self.opColorizeLabelImage.Input.connect(self.Output)
+        # self.ColorizedOutput.connect(self.opColorizeLabelImage.Output)
 
-    def setupOutputs(self):
-        self.opCache.blockShape.setValue( self.opPostprocessing.Output.meta.shape )
+    # def setupOutputs(self):
+    #     # self.opCache.blockShape.setValue( self.opPostprocessing.Output.meta.shape )
+    #
+    #     # self.Output.meta.assignFrom( self.opCache.Output.meta )
 
-        self.Output.meta.assignFrom( self.opCache.Output.meta )
-
-    def setInSlot(self, slot, subindex, key, value):
-        assert slot == self.CacheInput
-
-        self.opCache.setInSlot(self.opCache.Input, subindex, key, value)
+    # def setInSlot(self, slot, subindex, key, value):
+    #     assert slot == self.CacheInput
+    #
+    #     self.opCache.setInSlot(self.opCache.Input, subindex, key, value)
 
     def propagateDirty(self, slot, subindex, roi):
         pass

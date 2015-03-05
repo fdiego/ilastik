@@ -73,7 +73,9 @@ def main():
             workflow_cmdline_args = []
 
     # DEBUG EXAMPLES
-    #parsed_args.project='/Users/bergs/MyProject.ilp'
+    # parsed_args.project='/Users/kirkhamj/MyProject.ilp'
+    parsed_args.project='/Users/kirkhamj/TestProject.ilp'
+    parsed_args.debug=True
     #parsed_args.headless = True
 
     ilastik_main.main(parsed_args, workflow_cmdline_args)

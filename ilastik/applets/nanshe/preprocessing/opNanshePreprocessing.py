@@ -38,7 +38,7 @@ class OpNanshePreprocessing(Operator):
     category = "Pointwise"
 
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
     CacheInput = InputSlot(optional=True)
 
 
@@ -60,14 +60,14 @@ class OpNanshePreprocessing(Operator):
     Scale = InputSlot(value=4)
 
 
-    OpNansheRemoveZeroedLinesOutput = OutputSlot()
-    OpNansheExtractF0_dF_F_Output = OutputSlot()
-    OpNansheExtractF0_F0_Output = OutputSlot()
-    OpNansheWaveletTransformOutput = OutputSlot()
+    OpNansheRemoveZeroedLinesOutput = OutputSlot(allow_mask=True)
+    OpNansheExtractF0_dF_F_Output = OutputSlot(allow_mask=True)
+    OpNansheExtractF0_F0_Output = OutputSlot(allow_mask=True)
+    OpNansheWaveletTransformOutput = OutputSlot(allow_mask=True)
 
     CleanBlocks = OutputSlot()
     CacheOutput = OutputSlot()
-    Output = OutputSlot()
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNanshePreprocessing, self ).__init__( *args, **kwargs )

@@ -30,6 +30,7 @@ from lazyflow.graph import Operator, InputSlot, OutputSlot
 from lazyflow.operators import OpArrayCache
 
 from ilastik.applets.nanshe.opConvertType import OpConvertType, OpConvertTypeCached
+from ilastik.applets.nanshe.preprocessing.opNansheRegisterMeanOffsets import OpNansheRegisterMeanOffsets, OpNansheRegisterMeanOffsetsCached
 from ilastik.applets.nanshe.preprocessing.opNansheRemoveZeroedLines import OpNansheRemoveZeroedLines, OpNansheRemoveZeroedLinesCached
 from ilastik.applets.nanshe.preprocessing.opNansheExtractF0 import OpNansheExtractF0, OpNansheExtractF0Cached
 from ilastik.applets.nanshe.preprocessing.opNansheWaveletTransform import OpNansheWaveletTransform, OpNansheWaveletTransformCached
@@ -44,8 +45,9 @@ class OpNanshePreprocessData(Operator):
     category = "Pointwise"
 
     
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
+    ToRegisterMeanOffsets = InputSlot(value=False)
 
     ToRemoveZeroedLines = InputSlot(value=True)
     ErosionShape = InputSlot(value=[21, 1])
@@ -65,18 +67,21 @@ class OpNanshePreprocessData(Operator):
     Scale = InputSlot(value=4)
 
 
-    OpNansheRemoveZeroedLinesOutput = OutputSlot()
-    OpNansheExtractF0_dF_F_Output = OutputSlot()
-    OpNansheExtractF0_F0_Output = OutputSlot()
-    OpNansheWaveletTransformOutput = OutputSlot()
+    OpNansheRegisterMeanOffsetsOutput = OutputSlot(allow_mask=True)
+    OpNansheRemoveZeroedLinesOutput = OutputSlot(allow_mask=True)
+    OpNansheExtractF0_dF_F_Output = OutputSlot(allow_mask=True)
+    OpNansheExtractF0_F0_Output = OutputSlot(allow_mask=True)
+    OpNansheWaveletTransformOutput = OutputSlot(allow_mask=True)
 
-    Output = OutputSlot()
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNanshePreprocessData, self ).__init__( *args, **kwargs )
 
         self.opConvertType = OpConvertType(parent=self)
         self.opConvertType.Dtype.setValue(numpy.float32)
+
+        self.opNansheRegisterMeanOffsets = OpNansheRegisterMeanOffsets(parent=self)
 
         self.opNansheRemoveZeroedLines = OpNansheRemoveZeroedLines(parent=self)
         self.opNansheRemoveZeroedLines.ErosionShape.connect(self.ErosionShape)
@@ -96,6 +101,7 @@ class OpNanshePreprocessData(Operator):
         self.opNansheWaveletTransform.Scale.connect(self.Scale)
 
 
+        self.OpNansheRegisterMeanOffsetsOutput.connect(self.opNansheRegisterMeanOffsets.Output)
         self.OpNansheRemoveZeroedLinesOutput.connect(self.opNansheRemoveZeroedLines.Output)
         self.OpNansheExtractF0_dF_F_Output.connect(self.opNansheExtractF0.dF_F)
         self.OpNansheExtractF0_F0_Output.connect(self.opNansheExtractF0.F0)
@@ -110,6 +116,10 @@ class OpNanshePreprocessData(Operator):
 
         self.opConvertType.Input.connect(next_output)
         next_output = self.opConvertType.Output
+
+        if self.ToRegisterMeanOffsets.value:
+            self.opNansheRegisterMeanOffsets.Input.connect(next_output)
+            next_output = self.opNansheRegisterMeanOffsets.Output
 
         if self.ToRemoveZeroedLines.value:
             self.opNansheRemoveZeroedLines.Input.connect(next_output)
@@ -166,7 +176,7 @@ class OpNanshePreprocessDataCached(Operator):
 
 
     Input = InputSlot()
-    CacheInput = InputSlot(optional=True)
+    CacheInput = InputSlot()
 
 
     ToRemoveZeroedLines = InputSlot(value=True)
@@ -187,20 +197,23 @@ class OpNanshePreprocessDataCached(Operator):
     Scale = InputSlot(value=4)
 
 
-    OpNansheRemoveZeroedLinesOutput = OutputSlot()
-    OpNansheExtractF0_dF_F_Output = OutputSlot()
-    OpNansheExtractF0_F0_Output = OutputSlot()
-    OpNansheWaveletTransformOutput = OutputSlot()
+    OpNansheRegisterMeanOffsetsOutput = OutputSlot(allow_mask=True)
+    OpNansheRemoveZeroedLinesOutput = OutputSlot(allow_mask=True)
+    OpNansheExtractF0_dF_F_Output = OutputSlot(allow_mask=True)
+    OpNansheExtractF0_F0_Output = OutputSlot(allow_mask=True)
+    OpNansheWaveletTransformOutput = OutputSlot(allow_mask=True)
 
     CleanBlocks = OutputSlot()
-    CacheOutput = OutputSlot()
-    Output = OutputSlot()
+    CacheOutput = OutputSlot(allow_mask=True)
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNanshePreprocessDataCached, self ).__init__( *args, **kwargs )
 
         self.opConvertType = OpConvertTypeCached(parent=self)
         self.opConvertType.Dtype.setValue(numpy.float32)
+
+        self.opNansheRegisterMeanOffsets = OpNansheRegisterMeanOffsets(parent=self)
 
         self.opNansheRemoveZeroedLines = OpNansheRemoveZeroedLinesCached(parent=self)
         self.opNansheRemoveZeroedLines.ErosionShape.connect(self.ErosionShape)
@@ -241,6 +254,9 @@ class OpNanshePreprocessDataCached(Operator):
 
         self.opConvertType.Input.connect(next_output)
         next_output = self.opConvertType.Output
+
+        self.opNansheRegisterMeanOffsets.Input.connect(next_output)
+        next_output = self.opNansheRegisterMeanOffsets.Output
 
         if self.ToRemoveZeroedLines.value:
             self.opNansheRemoveZeroedLines.Input.connect(next_output)

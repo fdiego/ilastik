@@ -28,12 +28,21 @@ import os
 
 import numpy
 
+import vigra
+
 import PyQt4
 from PyQt4 import uic, QtCore
 from PyQt4.QtGui import QColor
 from PyQt4.QtCore import Qt
 
 from ilastik.applets.layerViewer.layerViewerGui import LayerViewerGui
+from ilastik.utility.gui import threadRouted
+
+from lazyflow.request import Request
+
+from volumina.pixelpipeline.datasources import ConstantSource, ArraySource
+from volumina.layer import ColortableLayer
+from volumina.colortables import jet
 
 
 class NanshePostprocessingGui(LayerViewerGui):
@@ -58,6 +67,8 @@ class NanshePostprocessingGui(LayerViewerGui):
         """
         self.topLevelOperatorView = topLevelOperatorView
         self.ndim = 0
+        self.result = None
+
         super(NanshePostprocessingGui, self).__init__(parentApplet, self.topLevelOperatorView)
 
         self._register_notify_dirty()
@@ -416,9 +427,36 @@ class NanshePostprocessingGui(LayerViewerGui):
 
         self._register_notify_dirty()
 
+
+        req = Request(lambda : NanshePostprocessingGui.compute_neurons(self.topLevelOperatorView.Output))
+        req.notify_finished(self.handle_the_result)
+        req.submit()
+
+        self.updateAllLayers()
+
         for i in xrange(len(self.layerstack)):
             if self.layerstack[i].name == "Output":
                 self.layerstack[i].visible = True
+
+    @staticmethod
+    def compute_neurons(outputImageSlot):
+        neurons = None
+
+        if outputImageSlot.ready():
+            neurons = outputImageSlot[slice(None)].wait()
+            neurons = neurons[0]
+
+            if not len(neurons):
+                neurons = vigra.taggedView(numpy.zeros((1,) + neurons.shape[1:], dtype=neurons.dtype), neurons.axistags)
+
+            neurons = neurons.withAxes(*[_ for _ in "txyzc"])
+
+        return(neurons)
+
+    @threadRouted
+    def handle_the_result(self, result):
+        self.result = result
+        self.updateAllLayers()
 
     def setupLayers(self):
         """
@@ -427,14 +465,41 @@ class NanshePostprocessingGui(LayerViewerGui):
         """
         layers = []
 
-        # Show the resulting label image
-        outputImageSlot = self.topLevelOperatorView.ColorizedOutput
-        if outputImageSlot.ready():
-            outputLayer = self.createStandardLayerFromSlot( outputImageSlot, lastChannelIsAlpha=True )
+        if self.result is not None:
+            outputSource = ArraySource(self.result)
+
+            neuron_colors = [QColor(0, 0, 0, 0).rgba(),
+                     QColor(0, 0, 255).rgba()]#,
+                     # QColor(255, 255, 0).rgba(),
+                     # QColor(255, 0, 0).rgba(),
+                     # QColor(0, 255, 0).rgba(),
+                     # QColor(0, 255, 255).rgba(),
+                     # QColor(255, 0, 255).rgba(),
+                     # QColor(255, 105, 180).rgba(), #hot pink
+                     # QColor(102, 205, 170).rgba(), #dark aquamarine
+                     # QColor(165,  42,  42).rgba(), #brown
+                     # QColor(0, 0, 128).rgba(),     #navy
+                     # QColor(255, 165, 0).rgba(),   #orange
+                     # QColor(173, 255,  47).rgba(), #green-yellow
+                     # QColor(128,0, 128).rgba(),    #purple
+                     # QColor(192, 192, 192).rgba(), #silver
+                     # QColor(240, 230, 140).rgba(), #khaki
+                     # QColor(69, 69, 69).rgba()]    # dark grey
+
+            outputLayer = ColortableLayer(outputSource, neuron_colors)
             outputLayer.name = "Output"
             outputLayer.visible = False
             outputLayer.opacity = 1.0
             layers.append(outputLayer)
+
+        # # Show the resulting label image
+        # outputImageSlot = self.topLevelOperatorView.ColorizedOutput
+        # if outputImageSlot.ready():
+        #     outputLayer = self.createStandardLayerFromSlot( outputImageSlot, lastChannelIsAlpha=True )
+        #     outputLayer.name = "OutputLabelImage"
+        #     outputLayer.visible = False
+        #     outputLayer.opacity = 1.0
+        #     layers.append(outputLayer)
 
         # Show the input data
         inputSlot = self.topLevelOperatorView.Input

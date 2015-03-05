@@ -35,6 +35,7 @@ import numpy
 
 import nanshe
 import nanshe.imp.advanced_image_processing
+import nanshe.util.xnumpy
 
 
 class OpNansheRemoveZeroedLines(Operator):
@@ -45,12 +46,12 @@ class OpNansheRemoveZeroedLines(Operator):
     name = "OpNansheRemoveZeroedLines"
     category = "Pointwise"
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
     ErosionShape = InputSlot(value=[21, 1])
     DilationShape = InputSlot(value=[1, 3])
 
-    Output = OutputSlot()
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNansheRemoveZeroedLines, self ).__init__( *args, **kwargs )
@@ -126,9 +127,15 @@ class OpNansheRemoveZeroedLines(Operator):
         erosion_shape = self.ErosionShape.value
         dilation_shape = self.DilationShape.value
 
-        processed = nanshe.imp.advanced_image_processing.remove_zeroed_lines(raw,
-                                                                                erosion_shape=erosion_shape,
-                                                                                dilation_shape=dilation_shape)
+        processed = raw.copy()
+        processed.fill(0)
+
+        processed[:, ~numpy.ma.getmaskarray(raw).max(axis=0)] = nanshe.imp.advanced_image_processing.remove_zeroed_lines(
+            nanshe.util.xnumpy.truncate_masked_frames(raw),
+            erosion_shape=erosion_shape,
+            dilation_shape=dilation_shape
+        ).reshape(len(raw), -1)
+
         processed = processed[..., None]
 
         if slot.name == 'Output':
@@ -154,12 +161,12 @@ class OpNansheRemoveZeroedLinesCached(Operator):
     category = "Pointwise"
 
 
-    Input = InputSlot()
+    Input = InputSlot(allow_mask=True)
 
     ErosionShape = InputSlot(value=[21, 1])
     DilationShape = InputSlot(value=[1, 3])
 
-    Output = OutputSlot()
+    Output = OutputSlot(allow_mask=True)
 
     def __init__(self, *args, **kwargs):
         super( OpNansheRemoveZeroedLinesCached, self ).__init__( *args, **kwargs )

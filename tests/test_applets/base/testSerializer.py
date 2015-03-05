@@ -431,5 +431,328 @@ class TestSerialBlockSlot(unittest.TestCase):
         os.remove(h5_filepath)
         shutil.rmtree(tmp_dir)
 
+    def testBasic5(self):
+        tmp_dir = tempfile.mkdtemp()
+        h5_filepath = os.path.join(tmp_dir , 'serial_blockslot_test.h5' )
+
+        # Create an operator and a serializer to write the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        # Give it some data.
+        opLabelArrays.Input.meta.has_mask = True
+
+        data_1 = numpy.ones((1,10,10,1), dtype=numpy.uint8)
+        data_2 = 2*data_1
+
+        data_1 = numpy.ma.masked_array(data_1, mask=numpy.zeros(data_1.shape, dtype=bool), shrink=False)
+        data_2 = numpy.ma.masked_array(data_2, mask=numpy.zeros(data_1.shape, dtype=bool), shrink=False)
+
+        data_1[:, :5, -5:, :] = numpy.ma.masked
+        data_2[:, -5:, :5, :] = numpy.ma.masked
+
+        opLabelArrays.Input[0][10:11, 10:20, 10:20, 0:1] = data_1
+        opLabelArrays.Input[0][11:12, 10:20, 10:20, 0:1] = data_2
+
+        with h5py.File(h5_filepath, 'w') as f:
+            label_group = f.create_group('label_data')
+            slotSerializer.serialize( label_group )
+
+        # Now start again with fresh objects.
+        # This time we'll read the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        with h5py.File(h5_filepath, 'r') as f:
+            label_group = f['label_data']
+            slotSerializer.deserialize( label_group )
+
+        # Verify that we get the same data back.
+        assert ( opLabelArrays.Output[0][10:11, 10:20, 10:20, 0:1].wait() == data_1 ).all()
+        assert ( opLabelArrays.Output[0][11:12, 10:20, 10:20, 0:1].wait() == data_2 ).all()
+
+        print("h5_filepath = " + repr(h5_filepath))
+
+        # os.remove(h5_filepath)
+        # shutil.rmtree(tmp_dir)
+
+    def testBasic6(self):
+        tmp_dir = tempfile.mkdtemp()
+        h5_filepath = os.path.join(tmp_dir , 'serial_blockslot_test.h5' )
+
+        # Create an operator and a serializer to write the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        # Give it some data.
+        opLabelArrays.Input[0][10:11, 10:20, 10:20, 0:1] = 1*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+        opLabelArrays.Input[0][11:12, 10:20, 10:20, 0:1] = 2*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+
+        with h5py.File(h5_filepath, 'w') as f:
+            label_group = f.create_group('label_data')
+            slotSerializer.serialize( label_group )
+
+            # Try smashing the data that was saved
+            for each_item in label_group:
+                del label_group[each_item]
+
+            # See if it will write again anyways.
+            slotSerializer.serialize( label_group )
+
+        # Now start again with fresh objects.
+        # This time we'll read the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        with h5py.File(h5_filepath, 'r') as f:
+            label_group = f['label_data']
+            slotSerializer.deserialize( label_group )
+
+        # Verify that we get the same data back.
+        assert ( opLabelArrays.Output[0][10:11, 10:20, 10:20, 0:1].wait() == 1 ).all()
+        assert ( opLabelArrays.Output[0][11:12, 10:20, 10:20, 0:1].wait() == 2 ).all()
+
+        os.remove(h5_filepath)
+        shutil.rmtree(tmp_dir)
+
+    def testBasic7(self):
+        tmp_dir = tempfile.mkdtemp()
+        h5_filepath = os.path.join(tmp_dir , 'serial_blockslot_test.h5' )
+
+        # Create an operator and a serializer to write the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        # Give it some data.
+        opLabelArrays.Input[0][10:11, 10:20, 10:20, 0:1] = 1*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+        opLabelArrays.Input[0][30:31, 30:40, 30:40, 0:1] = 2*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+
+        with h5py.File(h5_filepath, 'w') as f:
+            label_group = f.create_group('label_data')
+            slotSerializer.serialize( label_group )
+
+        # Now start again with fresh objects.
+        # This time we'll read the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        with h5py.File(h5_filepath, 'r') as f:
+            label_group = f['label_data']
+            slotSerializer.deserialize( label_group )
+
+        # Verify that we get the same data back.
+        assert ( opLabelArrays.Output[0][10:11, 10:20, 10:20, 0:1].wait() == 1 ).all()
+        assert ( opLabelArrays.Output[0][30:31, 30:40, 30:40, 0:1].wait() == 2 ).all()
+
+        os.remove(h5_filepath)
+        shutil.rmtree(tmp_dir)
+
+    def testBasic8(self):
+        tmp_dir = tempfile.mkdtemp()
+        h5_filepath = os.path.join(tmp_dir , 'serial_blockslot_test.h5' )
+
+        # Create an operator and a serializer to write the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        # Give it some data.
+        opLabelArrays.Input[0][10:11, 10:20, 10:20, 0:1] = 1*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+        opLabelArrays.Input[0][30:31, 30:40, 30:40, 0:1] = 2*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+
+        with h5py.File(h5_filepath, 'w') as f:
+            label_group = f.create_group('label_data')
+            slotSerializer.serialize( label_group )
+
+            # Get all dataset names
+            def iter_dataset_names(name):
+                if isinstance(label_group[name], h5py.Dataset):
+                    yield(name)
+
+            # Then delete them
+            for each_dataset_name in label_group.visit(iter_dataset_names):
+                del label_group[each_dataset_name]
+
+            # See if it will write again anyways.
+            slotSerializer.serialize( label_group )
+
+        # Now start again with fresh objects.
+        # This time we'll read the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        with h5py.File(h5_filepath, 'r') as f:
+            label_group = f['label_data']
+            slotSerializer.deserialize( label_group )
+
+        # Verify that we get the same data back.
+        assert ( opLabelArrays.Output[0][10:11, 10:20, 10:20, 0:1].wait() == 1 ).all()
+        assert ( opLabelArrays.Output[0][30:31, 30:40, 30:40, 0:1].wait() == 2 ).all()
+
+        os.remove(h5_filepath)
+        shutil.rmtree(tmp_dir)
+
+
+class TestSerialBlockSlot2(unittest.TestCase):
+
+    def _init_objects(self):
+        raw_data = numpy.zeros((100,100,100,1), dtype=numpy.uint32)
+        raw_data = vigra.taggedView(raw_data, 'zyxc')
+
+        opLabelArrays = OperatorWrapper( OpCompressedUserLabelArray, graph=Graph() )
+        opLabelArrays.Input.resize(1)
+        opLabelArrays.Input[0].setValue( raw_data )
+        opLabelArrays.shape.setValue( raw_data.shape )
+        opLabelArrays.eraser.setValue( 255 )
+        opLabelArrays.deleteLabel.setValue( -1 )
+        opLabelArrays.blockShape.setValue( (10,10,10,1) )
+
+        # This will serialize/deserialize data to the h5 file.
+        slotSerializer = SerialBlockSlot( opLabelArrays.Output, opLabelArrays.Input, opLabelArrays.nonzeroBlocks )
+        return opLabelArrays, slotSerializer
+
+    def testBasic1(self):
+        tmp_dir = tempfile.mkdtemp()
+        h5_filepath = os.path.join(tmp_dir , 'serial_blockslot_test.h5' )
+
+        # Create an operator and a serializer to write the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        # Give it some data.
+        opLabelArrays.Input.meta.has_mask = True
+
+        data_1 = numpy.ones((1,10,10,1), dtype=numpy.uint8)
+        data_2 = 2*data_1
+
+        data_1 = numpy.ma.masked_array(data_1, mask=numpy.zeros(data_1.shape, dtype=bool), shrink=False)
+        data_2 = numpy.ma.masked_array(data_2, mask=numpy.zeros(data_1.shape, dtype=bool), shrink=False)
+
+        data_1[:, :5, -5:, :] = numpy.ma.masked
+        data_2[:, -5:, :5, :] = numpy.ma.masked
+
+        opLabelArrays.Input[0][10:11, 10:20, 10:20, 0:1] = data_1
+        opLabelArrays.Input[0][11:12, 10:20, 10:20, 0:1] = data_2
+
+        with h5py.File(h5_filepath, 'w') as f:
+            label_group = f.create_group('label_data')
+            slotSerializer.serialize( label_group )
+
+        # Now start again with fresh objects.
+        # This time we'll read the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        with h5py.File(h5_filepath, 'r') as f:
+            label_group = f['label_data']
+            slotSerializer.deserialize( label_group )
+
+        # Verify that we get the same data back.
+        assert ( opLabelArrays.Output[0][10:11, 10:20, 10:20, 0:1].wait() == data_1 ).all()
+        assert ( opLabelArrays.Output[0][11:12, 10:20, 10:20, 0:1].wait() == data_2 ).all()
+
+        print("h5_filepath = " + repr(h5_filepath))
+
+        # os.remove(h5_filepath)
+        # shutil.rmtree(tmp_dir)
+
+    def testBasic3(self):
+        tmp_dir = tempfile.mkdtemp()
+        h5_filepath = os.path.join(tmp_dir , 'serial_blockslot_test.h5' )
+
+        # Create an operator and a serializer to write the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        # Give it some data.
+        opLabelArrays.Input[0][10:11, 10:20, 10:20, 0:1] = 1*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+        opLabelArrays.Input[0][11:12, 10:20, 10:20, 0:1] = 2*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+
+        with h5py.File(h5_filepath, 'w') as f:
+            label_group = f.create_group('label_data')
+            slotSerializer.serialize( label_group )
+
+            # Try smashing the data that was saved
+            for each_item in label_group:
+                del label_group[each_item]
+
+            # See if it will write again anyways.
+            slotSerializer.serialize( label_group )
+
+        # Now start again with fresh objects.
+        # This time we'll read the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        with h5py.File(h5_filepath, 'r') as f:
+            label_group = f['label_data']
+            slotSerializer.deserialize( label_group )
+
+        # Verify that we get the same data back.
+        assert ( opLabelArrays.Output[0][10:11, 10:20, 10:20, 0:1].wait() == 1 ).all()
+        assert ( opLabelArrays.Output[0][11:12, 10:20, 10:20, 0:1].wait() == 2 ).all()
+
+        os.remove(h5_filepath)
+        shutil.rmtree(tmp_dir)
+
+    def testBasic7(self):
+        tmp_dir = tempfile.mkdtemp()
+        h5_filepath = os.path.join(tmp_dir , 'serial_blockslot_test.h5' )
+
+        # Create an operator and a serializer to write the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        # Give it some data.
+        opLabelArrays.Input[0][10:11, 10:20, 10:20, 0:1] = 1*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+        opLabelArrays.Input[0][30:31, 30:40, 30:40, 0:1] = 2*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+
+        with h5py.File(h5_filepath, 'w') as f:
+            label_group = f.create_group('label_data')
+            slotSerializer.serialize( label_group )
+
+        # Now start again with fresh objects.
+        # This time we'll read the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        with h5py.File(h5_filepath, 'r') as f:
+            label_group = f['label_data']
+            slotSerializer.deserialize( label_group )
+
+        # Verify that we get the same data back.
+        assert ( opLabelArrays.Output[0][10:11, 10:20, 10:20, 0:1].wait() == 1 ).all()
+        assert ( opLabelArrays.Output[0][30:31, 30:40, 30:40, 0:1].wait() == 2 ).all()
+
+        os.remove(h5_filepath)
+        shutil.rmtree(tmp_dir)
+
+    def testBasic4(self):
+        tmp_dir = tempfile.mkdtemp()
+        h5_filepath = os.path.join(tmp_dir , 'serial_blockslot_test.h5' )
+
+        # Create an operator and a serializer to write the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        # Give it some data.
+        opLabelArrays.Input[0][10:11, 10:20, 10:20, 0:1] = 1*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+        opLabelArrays.Input[0][30:31, 30:40, 30:40, 0:1] = 2*numpy.ones((1,10,10,1), dtype=numpy.uint8)
+
+        with h5py.File(h5_filepath, 'w') as f:
+            label_group = f.create_group('label_data')
+            slotSerializer.serialize( label_group )
+
+            # Get all dataset names
+            def iter_dataset_names(name):
+                if isinstance(label_group[name], h5py.Dataset):
+                    yield(name)
+
+            # Then delete them
+            for each_dataset_name in label_group.visit(iter_dataset_names):
+                del label_group[each_dataset_name]
+
+            # See if it will write again anyways.
+            slotSerializer.serialize( label_group )
+
+        # Now start again with fresh objects.
+        # This time we'll read the data.
+        opLabelArrays, slotSerializer = self._init_objects()
+
+        with h5py.File(h5_filepath, 'r') as f:
+            label_group = f['label_data']
+            slotSerializer.deserialize( label_group )
+
+        # Verify that we get the same data back.
+        assert ( opLabelArrays.Output[0][10:11, 10:20, 10:20, 0:1].wait() == 1 ).all()
+        assert ( opLabelArrays.Output[0][30:31, 30:40, 30:40, 0:1].wait() == 2 ).all()
+
+        os.remove(h5_filepath)
+        shutil.rmtree(tmp_dir)
+
 if __name__ == "__main__":
     unittest.main()

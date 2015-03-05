@@ -30,6 +30,7 @@ import numpy
 
 import nanshe
 import nanshe.imp.advanced_image_processing
+import nanshe.util.xnumpy
 
 
 class OpNansheNormalizeData(Operator):
@@ -60,11 +61,16 @@ class OpNansheNormalizeData(Operator):
 
         ord = self.Ord.value
 
-        processed = nanshe.imp.advanced_image_processing.normalize_data(raw,
-                                                                    **{"simple_image_processing.renormalized_images" : {
-                                                                        "ord" : ord
-                                                                       }
-                                                                    })
+        processed = raw.copy()
+        processed.fill(0)
+
+        processed[:, ~numpy.ma.getmaskarray(raw).max(axis=0)] = nanshe.imp.advanced_image_processing.normalize_data(
+            nanshe.util.xnumpy.truncate_masked_frames(raw),
+            **{"simple_image_processing.renormalized_images" : {
+                "ord" : ord
+            }
+        }).reshape(len(raw), -1)
+
         processed = processed[..., None]
         
         if slot.name == 'Output':
