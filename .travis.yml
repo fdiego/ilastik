@@ -11,12 +11,17 @@ install:
    - wget -O nanshe-package.tgz https://www.dropbox.com/s/qhy2lhsk0ioge0p/nanshe-package.tgz?dl=0
    - tar -xzf nanshe-package.tgz
    - ls
-   # Replace the src in the prebuilt binary with the one TravisCI cloned for us.
    - rm -rf nanshe-package.tgz
-   - rm -rf nanshe-package/src/ilastik/ilastik
-   - mv $TRAVIS_REPO_SLUG nanshe-package/src/ilastik/ilastik
+   # Update all modules
+   - cd nanshe-package/src/ilastik
+   - git pull; git pull --recurse-submodules
+   - cd lazyflow; git pull; cd ..
+   - cd volumina; git pull; cd ..
+   # Replace the src in the prebuilt binary with the one TravisCI cloned for us.
+   - rm -rf ilastik
+   - mv ../../../$TRAVIS_REPO_SLUG ilastik
    # Won't recognize setup.cfg unless we are in the source directory.
-   - cd nanshe-package/src/ilastik/ilastik
+   - cd ilastik
 script:
    # Run tests. Skip 3D tests as they take too long (~1hr).
    - ../../../bin/exec.sh ../../../bin/python ../../../bin/nosetests -a '!3D' tests/
