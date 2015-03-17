@@ -14,6 +14,7 @@ install:
    - rm -rf nanshe-package.tgz
    # Update all modules
    - cd nanshe-package/src/ilastik
+   - cd ilastik; git remote set-url origin https://github.com/ilastik/ilastik ; git pull; cd ..
    - cd lazyflow; git remote set-url origin https://github.com/ilastik/lazyflow ; git pull; cd ..
    - cd volumina; git remote set-url origin https://github.com/ilastik/volumina ; git pull; cd ..
    - git pull; git pull --recurse-submodules
