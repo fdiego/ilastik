@@ -6,6 +6,10 @@ before_install:
    - deactivate
    - cd ../..
    - pwd
+   # Update git.
+   - sudo add-apt-repository ppa:git-core/ppa
+   - sudo apt-get update
+   - sudo apt-get install git
 install:
    # Download and extract the prebuilt binary.
    - wget -O nanshe-package.tgz https://www.dropbox.com/s/qhy2lhsk0ioge0p/nanshe-package.tgz?dl=0
@@ -26,5 +30,3 @@ install:
 script:
    # Run tests. Skip 3D tests as they take too long (~1hr).
    - ../../../bin/exec.sh ../../../bin/python ../../../bin/nosetests -a '!3D' tests/
-# Use container format for TravisCI to avoid termination due to insufficient resources.
-sudo: false
