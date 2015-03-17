@@ -18,9 +18,9 @@ install:
    - rm -rf nanshe-package.tgz
    # Update all modules
    - cd nanshe-package/src/ilastik
-   - cd ilastik; git remote set-url origin https://github.com/ilastik/ilastik ; git checkout master ; git fetch ; git reset --hard origin/master ; cd ..
-   - cd lazyflow; git remote set-url origin https://github.com/ilastik/lazyflow ; git checkout master ; git fetch ; git reset --hard origin/master ; cd ..
-   - cd volumina; git remote set-url origin https://github.com/ilastik/volumina ; git checkout master ; git fetch ; git reset --hard origin/master ; cd ..
+   - cd ilastik; git reset --hard; git remote set-url origin https://github.com/ilastik/ilastik ; git checkout master ; git fetch ; git reset --hard origin/master ; cd ..
+   - cd lazyflow; git reset --hard; git remote set-url origin https://github.com/ilastik/lazyflow ; git checkout master ; git fetch ; git reset --hard origin/master ; cd ..
+   - cd volumina; git reset --hard; git remote set-url origin https://github.com/ilastik/volumina ; git checkout master ; git fetch ; git reset --hard origin/master ; cd ..
    - git pull; git pull --recurse-submodules
    # Replace the src in the prebuilt binary with the one TravisCI cloned for us.
    - rm -rf ilastik
